@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .navbar-brand {
+            color: white;
+        }
+        .container-fluid {
+            padding-top: 10px; /* เพิ่มระยะห่างด้านบน */
+            padding-bottom: 10px;
+        }
+    </style>
+    </head>
+    <body>
+        <div id="navbar-placeholder"></div>
+        <div class="container-fluid main-content">
+            <div class="row mt-5"> 
+                <div class="col-md-12">
+                    <h1 class="h2 mb-4"></h1>
+                </div>
+            </div>
+    
+            <div class="row">
+                <!-- User Count Card -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0"><i class="fas fa-users"></i> Total Users</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="userChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Brand Overview Card -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Brands Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="brandChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Statistics Cards -->
+                <div class="col-md-4 mb-4">
+                    <div class="card mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title"><i class="fas fa-car"></i> Total Cars</h5>
+                            <p id="carCount" class="display-4"></p>
+                        </div>
+                    </div>
+                    <div class="card mb-3">
+                        <div class="card-body text-center">
+                            <h5 class="card-title"><i class="fas fa-building"></i> Total Brands</h5>
+                            <p id="brandCount" class="display-4"></p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title"><i class="fas fa-users"></i> Total Users</h5>
+                            <p id="userCount" class="display-4"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="footer-placeholder"></div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script>
+        // Function to get user role from session storage
+        function getUserRole() {
+            return sessionStorage.getItem('user_role');
+        }
+
+        // Function to get token from local storage
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Function to load navbar based on user role
+        async function loadNavbar() {
+            const userRole = getUserRole();
+            let url = '/navbar'; // Default URL
+            if (userRole === 'admin') {
+                url = '/navbar_admin';
+            } else if (userRole === 'user') {
+                url = '/navbar_user';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load navbar');
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading navbar:', error);
+            }
+        }
+
+        // Function to load footer
+        async function loadFooter() {
+            try {
+                const response = await fetch('/footer');
+                if (!response.ok) throw new Error('Failed to load footer');
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading footer:', error);
+            }
+        }
+        // Fetch data from the dashboard endpoint
+        fetch('/dashboard/dashboard')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create User Count Chart
+                    createUserChart(data.data.userCount);
+    
+                    // Create Brand Count Chart
+                    createBrandChart(data.data.brandCarCounts);
+    
+                    // Display Total Car Count
+                    createCar(data.data.carCount);
+                    // Display Total Brand Count
+                    createBrand(data.data.brandCount);
+                    // Display Total User Count
+                    createUser(data.data.userCount);
+                } else {
+                    console.error('Failed to fetch data:', data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    
+        // Function to create the User Count chart
+        function createUserChart(userCount) {
+            const ctx = document.getElementById('userChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Users'],
+                    datasets: [{
+                        label: 'Total Users',
+                        data: [userCount],
+                        backgroundColor: ['#36a2eb'],
+                        borderColor: ['#36a2eb'],
+                        borderWidth: 1
+                    }]
+                }
+            });
+        }
+    
+        // Function to create the Brand Count chart using brandCarCounts
+        function createBrandChart(brandCarCounts) {
+            const ctx = document.getElementById('brandChart').getContext('2d');
+            const brandNames = brandCarCounts.map(item => item.brandName);
+            const carCounts = brandCarCounts.map(item => item.carCount);
+    
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: brandNames,
+                    datasets: [{
+                        label: '# of Cars per Brand',
+                        data: carCounts,
+                        backgroundColor: '#ffce56',
+                        borderColor: '#ffce56',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    
+        // Function to display Total Car Count
+        function createCar(carCount) {
+            document.getElementById('carCount').textContent = carCount;
+        }
+    
+        // Function to display Total Brand Count
+        function createBrand(brandCount) {
+            document.getElementById('brandCount').textContent = brandCount;
+        }
+    
+        // Function to display Total User Count
+        function createUser(userCount) {
+            document.getElementById('userCount').textContent = userCount;
+        }
+    
+        // Function to populate a list
+        function populateList(elementId, items) {
+            const list = document.getElementById(elementId);
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.name;
+                list.appendChild(li);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadNavbar();
+            await loadFooter();
+        });
+    </script>
+    
+</body>
+</html>

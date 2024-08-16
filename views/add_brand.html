@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQv_oL1l60gN7zHc_fMS11OeFR-mLDi3DgjNg&s"
+        type="image/png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.18/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .profile-container {
+            margin-top: 50px;
+        }
+
+        .card {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .card-body img {
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+
+        .card-body p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        .icon-button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            color: #333333;
+            background: #dddddd;
+            border: none;
+            outline: none;
+            border-radius: 50%;
+        }
+
+        .icon-button:hover {
+            cursor: pointer;
+        }
+
+        .icon-button:active {
+            background: #cccccc;
+        }
+
+        .icon-button__badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: red;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+        }
+
+        .navbar-nav .icon-button-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .navbar-nav .icon-button {
+            margin-right: 10px;
+        }
+
+        #navbar-placeholder {
+            margin-bottom: 20px;
+        }
+
+        .container {
+            padding-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container mt-5 ">
+        <h1>Create New Brand</h1>
+        <form id="brandForm">
+            <div class="mb-3">
+                <label for="name" class="form-label">Brand Name</label>
+                <input type="text" class="form-control" id="name" placeholder="Enter brand name" required>
+            </div>
+            <div class="mb-3">
+                <label for="image" class="form-label">Brand Image URL</label>
+                <input type="text" class="form-control" id="image" placeholder="Enter image URL" required>
+            </div>
+            <div class="mb-3">
+                <label for="detail" class="form-label">Brand Details</label>
+                <textarea class="form-control" id="detail" rows="3" placeholder="Enter brand details"
+                    required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Brand</button>
+        </form>
+        <div id="resultMessage" class="mt-3"></div>
+    </div>
+    <div class="container mt-5">
+        <div id="footer-placeholder"></div>
+    </div>
+    <div id="footer-placeholder"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.18/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        // Function to get user role from session storage
+        function getUserRole() {
+            return sessionStorage.getItem('user_role');
+        }
+
+        // Function to get token from local storage
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Function to load navbar based on user role
+        async function loadNavbar() {
+            const userRole = getUserRole();
+            let url = '/navbar'; // Default URL
+            if (userRole === 'admin') {
+                url = '/navbar_admin';
+            } else if (userRole === 'user') {
+                url = '/navbar_user';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load navbar');
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading navbar:', error);
+            }
+        }
+
+        // Function to load footer
+        async function loadFooter() {
+            try {
+                const response = await fetch('/footer');
+                if (!response.ok) throw new Error('Failed to load footer');
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading footer:', error);
+            }
+        }
+
+        // Function to initialize the page
+        async function initializePage() {
+            const userRole = getUserRole();
+            if (userRole !== 'admin') {
+                // Redirect to home if the user is not an admin
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'You do not have permission to view this page.',
+                }).then(() => {
+                    window.location.href = '/main';
+                });
+                return;
+            }
+
+            // Load navbar and footer if user is an admin
+            await loadNavbar();
+            await loadFooter();
+        }
+
+        // Add form submit event listener
+        document.getElementById('brandForm').addEventListener('submit', async function (e) {
+            e.preventDefault(); // Prevent the default form submission
+
+            // Extract form data
+            const name = document.getElementById('name').value;
+            const image = document.getElementById('image').value;
+            const detail = document.getElementById('detail').value;
+
+            // Create data object
+            const data = {
+                name: name,
+                image: image,
+                detail: detail
+            };
+
+            try {
+                // Send POST request to backend
+                const response = await fetch('/brand', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}` // Send token with request
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show result using SweetAlert
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: result.message,
+                        showConfirmButton: true
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message,
+                        showConfirmButton: true
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: `⛔ Failed to create brand: ${error.message}`,
+                    showConfirmButton: true
+                });
+            }
+        });
+
+        // Initialize page with user role check and loading navbar/footer
+        initializePage();
+    </script>
+
+</body>
+
+
+</html>

@@ -1,0 +1,121 @@
+<body>  
+    <div class="container mt-3">
+        <div id="navbar-placeholder"></div>
+    </div>
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://1000logos.net/wp-content/uploads/2020/04/Koenigsegg-Logo.png" class="card-img-top" alt="Koenigsegg">
+                    <div class="card-body">
+                        <h5 class="card-title">Koenigsegg</h5>
+                        <p class="card-text">A Swedish supercar famous for its speed and unique design.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://logos-world.net/wp-content/uploads/2021/09/Pagani-Logo.png" class="card-img-top" alt="Pagani">
+                    <div class="card-body">
+                        <h5 class="card-title">Pagani</h5>
+                        <p class="card-text">An Italian hypercar with a luxurious design and meticulous production.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://logos-world.net/wp-content/uploads/2021/11/Zenvo-Logo.png" class="card-img-top" alt="Zenvo">
+                    <div class="card-body">
+                        <h5 class="card-title">Zenvo</h5>
+                        <p class="card-text">Danish hypercar manufacturer that focuses on high performance and sharp design.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://cdn.worldvectorlogo.com/logos/ferrari-ges.svg" class="card-img-top" alt="Ferrari">
+                    <div class="card-body">
+                        <h5 class="card-title">Ferrari</h5>
+                        <p class="card-text">A Italian manufacturer and has become a symbol of luxury, speed and efficiency.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://www.carlogos.org/logo/Rimac-logo-2016-2048x2048.png" class="card-img-top" alt="Rimac">
+                    <div class="card-body">
+                        <h5 class="card-title">Rimac</h5>
+                        <p class="card-text">A Croatian company that produces high-performance electric cars.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/7/7a/W_Motors_Logo.png" class="card-img-top" alt="W_Motors">
+                    <div class="card-body">
+                        <h5 class="card-title">W_Motors</h5>
+                        <p class="card-text">A company from Dubai that produces luxury hypercars.</p>
+                        <a href="#" class="btn btn-primary">Read</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container mt-3">
+        <div id="footer-placeholder"></div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const username = sessionStorage.getItem('user_username');
+            const role = sessionStorage.getItem('user_role');
+            const token = localStorage.getItem('authToken');
+
+            async function getUserRole() {
+                return sessionStorage.getItem('user_role');
+            }
+            async function footer() {
+                await loadfooter('/footer');
+            }
+            async function loadfooter(url) {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html; // Ensure ID matches here
+            }
+
+            async function loadNavbar(url) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to load navbar');
+                    const html = await response.text();
+                    document.getElementById('navbar-placeholder').innerHTML = html;
+                } catch (error) {
+                    console.error('Error loading navbar:', error);
+                }
+            }
+
+            async function initializePage() {
+                const userRole = await getUserRole();
+
+                if (userRole === 'admin') {
+                    await loadNavbar('/navbar_admin');
+                } else if (userRole === 'user') {
+                    await loadNavbar('/navbar_user');
+                } else {
+                    console.error('Invalid user role:', userRole);
+                    window.location.href = '/home';
+                    return;
+                }
+            }
+
+            // Initialize navbar and page
+            await initializePage();
+            footer();
+        });
+    </script>

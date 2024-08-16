@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container mt-4">
+        <h1 class="mb-4">User List</h1>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">No.</th>
+                    <th scope="col">Username</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            async function getUserRole() {
+                return sessionStorage.getItem('user_role');
+            }
+
+            async function loadNavbar(url) {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            }
+
+            async function initializePage() {
+                const userRole = await getUserRole();
+                
+                if (userRole === 'admin') {
+                    await loadNavbar('/navbar_admin');
+                } else if (userRole === 'user') {
+                    await loadNavbar('/navbar_user');
+                } else {
+                    console.error('Invalid user role:', userRole);
+                    window.location.href = '/home';
+                    return;
+                }
+
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    // If no token, redirect to login page
+                    window.location.href = '/home';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/dashboard/users', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        const userTableBody = document.getElementById('userTableBody');
+                        userTableBody.innerHTML = ''; // Clear existing data
+
+                        result.data.forEach((user, index) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <th scope="row">${index + 1}</th>
+                                <td>${user.username}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                            `;
+                            userTableBody.appendChild(row);
+                        });
+                    } else {
+                        console.error('Failed to fetch users:', result.message);
+                    }
+                } catch (error) {
+                    console.error('Error fetching users:', error);
+                }
+            }
+
+            await initializePage(); // Ensure that navbar and user data are initialized
+        });
+    </script>
+</body>
+
+</html>

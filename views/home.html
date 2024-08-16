@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/25/25694.png">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        .form {
+            width: 300px;
+            background-color: rgba(255, 255, 255, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px 20px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, .2);
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        .input {
+            font-size: 15px;
+            padding: 15px 10px;
+            border-radius: 5px;
+            border: none;
+            margin-top: 10px;
+            box-shadow: inset 0 1px 1px rgba(0, 0, 0, .2), 0 .5px .5px rgba(0, 0, 0, .2);
+            outline: none;
+        }
+
+        .input:focus {
+            outline: 1.2px solid #1877f2;
+        }
+
+        #loginBtn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px 20px;
+            align-self: center;
+            background: #1877f2;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        #loginBtn:hover {
+            background: #196fe0;
+        }
+
+        #forgotPassword {
+            text-align: center;
+            position: relative;
+            margin-top: 10px;
+            width: 100%;
+            font-size: 13px;
+            align-self: center;
+            font-weight: bold;
+            color: #1877f2;
+        }
+
+        #forgotPassword::after {
+            position: absolute;
+            content: '';
+            width: 100%;
+            height: .5px;
+            bottom: -25px;
+            left: 0;
+            background: #dadde1;
+        }
+
+        #forgotPassword:hover {
+            text-decoration: underline;
+        }
+
+        #createAccountBtn {
+            margin-top: 40px;
+            margin-bottom: 10px;
+            padding: 15px 15px;
+            align-self: center;
+            background: #42b72a;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        #createAccountBtn:hover {
+            background: #34a61d;
+        }
+        .input-container {
+            position: relative;
+            width: 100%;
+        }
+        .input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <form class="form" id="user-form">
+        <input placeholder="Email address" class="input" type="email" id="email">
+        <div class="input-container">
+            <input placeholder="Password" class="input" type="password" id="password">
+            <span class="toggle-password" id="togglePassword">👁️</span>
+        </div>
+        <button id="loginBtn">Login</button>
+        <a id="forgotPassword" href="/forgetpassword">Forgotten password?</a>
+        <button class="create" id="createAccountBtn">Create new account</button>
+    </form>
+
+    <script>
+        document.querySelector('#loginBtn').addEventListener('click', async function (e) {
+            e.preventDefault();
+
+            const email = document.querySelector('#email').value;
+            const password = document.querySelector('#password').value;
+
+            const data = {
+                email: email,
+                password: password,
+            };
+
+            try {
+                const response = await fetch('/home/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Store token and role in localStorage or sessionStorage
+                    localStorage.setItem('authToken', result.data.token);
+                    sessionStorage.setItem('user_role', result.data.role);
+                    sessionStorage.setItem('user_username', result.data.username);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: result.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Redirect to the dashboard
+                        window.location.href = '/main'; // เปลี่ยน URL ตามต้องการ
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message,
+                        confirmButtonText: 'Try Again'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred. Please try again later.',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+
+        document.querySelector('#createAccountBtn').addEventListener('click', function (e) {
+            e.preventDefault();
+            window.location.href = '/register';
+        });
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+
+        togglePassword.addEventListener('click', () => {
+            // Toggle the type attribute of the password input field
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+
+            // Toggle the eye icon based on the input type
+            togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
+    </script>
+</body>
+
+</html>

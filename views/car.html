@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/256/846/846338.png">
+    <style>
+        .container {
+            padding-top: 30px;
+            padding-bottom: 20px;
+        }
+
+        .card-img-top {
+            transition: transform 0.3s ease;
+        }
+
+        .card-img-top:hover {
+            transform: scale(1.1);
+            z-index: 1;
+        }
+
+        .card-body {
+            text-align: center;
+        }
+
+
+        .container {
+            padding-top: 30px;
+        }
+
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .car-card {
+            flex: 1 0 300px;
+            max-width: 300px;
+        }
+
+        .car-card img {
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .car-card .card-body {
+            text-align: center;
+        }
+
+        #footer-placeholder {
+            padding-bottom: 30px;
+            ;
+        }
+
+        .speed-gauge {
+            width: 100%;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .gauge-bar {
+            height: 100%;
+            background-color: #28a745;
+            /* Green color for the speed gauge */
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container mt-4">
+        <h1 class="mb-4"></h1>
+        <div class="card-container" id="carCardContainer">
+            <!-- Car cards will be inserted here dynamically -->
+        </div>
+    </div>
+    <div id="footer-placeholder"></div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script>
+        // Function to get user role from session storage
+        function getUserRole() {
+            return sessionStorage.getItem('user_role');
+        }
+
+        // Function to get token from local storage
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Function to load navbar based on user role
+        async function loadNavbar() {
+            const userRole = getUserRole();
+            let url = '/navbar'; // Default URL
+            if (userRole === 'admin') {
+                url = '/navbar_admin';
+            } else if (userRole === 'user') {
+                url = '/navbar_user';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load navbar');
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading navbar:', error);
+            }
+        }
+
+        // Function to load footer
+        async function loadFooter() {
+            try {
+                const response = await fetch('/footer');
+                if (!response.ok) throw new Error('Failed to load footer');
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading footer:', error);
+            }
+        }
+
+        async function fetchCarsByBrand() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandId = urlParams.get('brandId');
+
+            if (!brandId) {
+                console.error('No brand ID found in the URL');
+                return;
+            }
+
+            try {
+                const response = await fetch('/car/get', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ brandId: brandId })
+                });
+
+                const cars = await response.json();
+
+                if (response.ok) {
+                    populateCards(cars); // Populate the cards with car data
+                } else {
+                    console.error("Error fetching cars:", cars.message);
+                }
+            } catch (error) {
+                console.error("Network error:", error);
+            }
+        }
+
+        function getSpeedColor(speed) {
+            // Define color ranges
+            if (speed <= 250) return '#28a745'; // Green
+            if (speed <= 350) return '#ffc107'; // Yellow
+            if (speed <= 400) return '#fd7e14'; // Orange
+            return '#dc3545'; // Red
+        }
+
+        function getSpeedIcon(speed) {
+            if (speed <= 250) return 'fas fa-circle'; // Green Circle
+            if (speed <= 350) return 'fas fa-exclamation-triangle'; // Yellow Triangle
+            if (speed <= 400) return 'fas fa-star'; // Orange Star
+            return 'fas fa-bolt'; // Red Lightning Bolt
+        }
+
+        function parseSpeed(speedString) {
+            const match = speedString.match(/(\d+)\s*km\/h/);
+            return match ? parseInt(match[1], 10) : 0;
+        }
+
+        function populateCards(cars) {
+            const cardContainer = document.getElementById('carCardContainer');
+            cardContainer.innerHTML = '';
+            
+            cars.forEach(car => {
+                document.title = car.name;
+                const actualSpeed = parseSpeed(car.speed); // Parse speed from string
+                const speedPercentage = Math.min(actualSpeed / 500 * 100, 100); // Assuming 500 as max speed
+                const speedIcon = getSpeedIcon(actualSpeed); // Get icon based on speed
+
+                const card = `
+        <div class="card car-card">
+            <img src="${car.image}" class="card-img-top" alt="${car.name}">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-car"></i> ${car.name}
+                </h5>
+                <p class="card-text">
+                    <i class="fas fa-info-circle"></i> ${car.detail}
+                </p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-tachometer-alt"></i> Speed: 
+                        <div class="speed-gauge">
+                            <div class="gauge-bar" style="width: ${speedPercentage}%; background-color: ${getSpeedColor(actualSpeed)};"></div>
+                        </div>
+                        <i class="${speedIcon}" style="color: ${getSpeedColor(actualSpeed)};"></i> ${actualSpeed} km/h
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-weight-hanging"></i> Weight: ${car.weight} kg
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-dollar-sign"></i> Price: ${car.price}
+                    </li>
+                </ul>
+            </div>
+        </div>`;
+
+                cardContainer.innerHTML += card;
+            });
+        }
+
+        // Load navbar, footer and car data when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadNavbar();
+            await loadFooter();
+            await fetchCarsByBrand(); // เรียกใช้ฟังก์ชันนี้เพื่อโหลดข้อมูลรถตาม brandId ที่มาจาก URL
+        });
+    </script>
+
+
+</body>
+
+</html>

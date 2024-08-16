@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/25/25694.png">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .container {
+            padding-top: 30px;
+        }
+
+        .card {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-3">
+        <div id="navbar-placeholder"></div>
+    </div>
+    <div class="container mt-3">
+        <div id="brands-container" class="row"></div>
+    </div>
+    <div class="container mt-3">
+        <div id="footer-placeholder"></div>
+    </div>
+
+    <script>
+        function openCarPage(brandId) {
+            window.open(`/car?brandId=${brandId}`, '_blank');
+        }
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const username = sessionStorage.getItem('user_username');
+            const role = sessionStorage.getItem('user_role');
+            const token = localStorage.getItem('authToken');
+
+            async function getUserRole() {
+                return sessionStorage.getItem('user_role');
+            }
+
+            async function footer() {
+                await loadFooter('/footer');
+            }
+
+            async function loadFooter(url) {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            }
+
+            async function loadNavbar(url) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to load navbar');
+                    const html = await response.text();
+                    document.getElementById('navbar-placeholder').innerHTML = html;
+                } catch (error) {
+                    console.error('Error loading navbar:', error);
+                }
+            }
+
+            async function loadBrands() {
+                try {
+                    const response = await fetch('/brand/brands'); // เรียก API เพื่อดึงข้อมูล brands
+                    if (!response.ok) throw new Error('Failed to load brands');
+                    const brands = await response.json();
+
+                    const brandsContainer = document.getElementById('brands-container');
+                    brandsContainer.innerHTML = '';
+
+                    brands.forEach(brand => {
+                        const brandCard = `
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <img src="${brand.image}" class="card-img-top" alt="${brand.name}">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${brand.name}</h5>
+                                        <p class="card-text">${brand.detail}</p>
+                                        <button class="btn btn-primary" onclick="openCarPage('${brand._id}')">Read</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        brandsContainer.innerHTML += brandCard;
+                    });
+                } catch (error) {
+                    console.error('Error loading brands:', error);
+                }
+            }
+
+            async function initializePage() {
+                const userRole = await getUserRole();
+
+                if (userRole === 'admin') {
+                    await loadNavbar('/navbar_admin');
+                } else if (userRole === 'user') {
+                    await loadNavbar('/navbar_user');
+                } else {
+                    console.error('Invalid user role:', userRole);
+                    window.location.href = '/home';
+                    return;
+                }
+
+                await loadBrands(); // โหลดข้อมูล brands หลังจากโหลด navbar เสร็จ
+            }
+
+            // Initialize navbar and page
+            await initializePage();
+            footer();
+        });
+    </script>
+</body>
+
+</html>

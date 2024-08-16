@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            padding-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container mt-5">
+        <h2>Brand List</h2>
+        <table class="table table-bordered table-striped table-hover table-sm">
+            <thead>
+                <tr>
+                    <th>Brand Name</th>
+                    <th>Details</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="brandTableBody">
+                <!-- รายการแบรนด์จะแสดงที่นี่ -->
+            </tbody>
+        </table>
+    </div>
+    <div id="footer-placeholder"></div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Function to get user role from session storage
+        function getUserRole() {
+            return sessionStorage.getItem('user_role');
+        }
+
+        // Function to get token from local storage
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Function to load navbar based on user role
+        async function loadNavbar() {
+            const userRole = getUserRole();
+            let url = '/navbar'; // Default URL
+            if (userRole === 'admin') {
+                url = '/navbar_admin';
+            } else if (userRole === 'user') {
+                url = '/navbar_user';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load navbar');
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading navbar:', error);
+            }
+        }
+
+        // Function to load footer
+        async function loadFooter() {
+            try {
+                const response = await fetch('/footer');
+                if (!response.ok) throw new Error('Failed to load footer');
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading footer:', error);
+            }
+        }
+
+        // Function to initialize the page
+        async function initializePage() {
+            const userRole = getUserRole();
+            if (userRole !== 'admin') {
+                // Redirect to home if the user is not an admin
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'You do not have permission to view this page.',
+                }).then(() => {
+                    window.location.href = '/main';
+                });
+                return;
+            }
+
+            // Load navbar and footer if user is an admin
+            await loadNavbar();
+            await loadFooter();
+        }
+        async function fetchBrands() {
+            try {
+                const response = await fetch('/brand/getbrand');
+                const brands = await response.json();
+
+                if (response.ok) {
+                    populateTable(brands);
+                } else {
+                    console.error("Error fetching brands:", brands.message);
+                }
+            } catch (error) {
+                console.error("Network error:", error);
+            }
+        }
+
+        function populateTable(brands) {
+            const tableBody = document.getElementById('brandTableBody');
+            tableBody.innerHTML = '';
+
+            brands.forEach(brand => {
+                const row = `<tr>
+                    <td>${brand.name}</td>
+                    <td>${brand.detail}</td>
+                    <td>${new Date(brand.created_at).toLocaleDateString()}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteBrand('${brand._id}')">Delete</button></td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        async function deleteBrand(id) {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
+                const token = getToken(); // Retrieve the token here
+
+                try {
+                    const response = await fetch(`/brand/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` // Use the token here
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        Swal.fire(
+                            'Deleted!',
+                            'The brand has been deleted.',
+                            'success'
+                        );
+                        fetchBrands(); // Fetch updated brands after deletion
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            'Failed to delete the brand: ' + result.message,
+                            'error'
+                        );
+                    }
+                } catch (error) {
+                    console.error("Network error:", error);
+                    Swal.fire(
+                        'Error!',
+                        'Network error occurred while trying to delete the brand.',
+                        'error'
+                    );
+                }
+            }
+        }
+
+        initializePage();
+        fetchBrands(); // เรียกใช้เพื่อดึงข้อมูลแบรนด์เมื่อโหลดหน้า
+    </script>
+</body>
+
+</html>

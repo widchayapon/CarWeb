@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car List</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            padding-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container mt-5">
+        <h1>Car List</h1>
+        <div class="form-group">
+            <label for="brandSelect">Select Brand:</label>
+            <select id="brandSelect" class="form-control">
+                <option value="">Select a brand</option>
+                <!-- Options will be loaded dynamically -->
+            </select>
+        </div>
+        <table class="table table-bordered mt-4" id="carTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Detail</th>
+                    <th>Speed</th>
+                    <th>Weight</th>
+                    <th>Price</th>
+                    <th>Action</th> <!-- Add a column for actions -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Car rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+    <div id="footer-placeholder"></div>
+
+    <!-- Bootstrap and jQuery JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Function to get user role from session storage
+        function getUserRole() {
+            return sessionStorage.getItem('user_role');
+        }
+
+        // Function to get token from local storage
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Function to load navbar based on user role
+        async function loadNavbar() {
+            const userRole = getUserRole();
+            let url = '/navbar'; // Default URL
+            if (userRole === 'admin') {
+                url = '/navbar_admin';
+            } else if (userRole === 'user') {
+                url = '/navbar_user';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load navbar');
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading navbar:', error);
+            }
+        }
+
+        // Function to load footer
+        async function loadFooter() {
+            try {
+                const response = await fetch('/footer');
+                if (!response.ok) throw new Error('Failed to load footer');
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading footer:', error);
+            }
+        }
+
+        // Function to initialize the page
+        async function initializePage() {
+            const userRole = getUserRole();
+            if (userRole !== 'admin') {
+                // Redirect to home if the user is not an admin
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'You do not have permission to view this page.',
+                }).then(() => {
+                    window.location.href = '/main';
+                });
+                return;
+            }
+
+            // Load navbar and footer if user is an admin
+            await loadNavbar();
+            await loadFooter();
+        }
+
+        // Function to load brands into the dropdown
+        async function loadBrands() {
+            try {
+                const response = await fetch('http://localhost:3000/brand/brands');
+                if (!response.ok) throw new Error('Failed to load brands');
+                const brands = await response.json();
+                const brandSelect = document.getElementById('brandSelect');
+                brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand._id;
+                    option.textContent = brand.name;
+                    brandSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading brands:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load brands.'
+                });
+            }
+        }
+
+        // Function to load cars based on selected brand
+        async function loadCars(brandId) {
+            try {
+                const response = await fetch(`http://localhost:3000/car/brand?brandId=${brandId}`);
+                if (!response.ok) throw new Error('Failed to load cars');
+                const cars = await response.json();
+                const carTableBody = document.getElementById('carTable').getElementsByTagName('tbody')[0];
+                carTableBody.innerHTML = ''; // Clear existing rows
+
+                cars.forEach(car => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${car.name}</td>
+                        <td>${car.detail}</td>
+                        <td>${car.speed}</td>
+                        <td>${car.weight}</td>
+                        <td>${car.price}</td>
+                        <td><button class="btn btn-danger btn-sm" onclick="deleteCar('${car._id}')">Delete</button></td>
+                    `;
+                    carTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading cars:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load cars.'
+                });
+            }
+        }
+
+        // Function to delete a car
+        async function deleteCar(carId) {
+            try {
+                const response = await fetch(`http://localhost:3000/car/${carId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted',
+                        text: result.message
+                    }).then(() => {
+                        // Reload cars after successful deletion
+                        const brandId = document.getElementById('brandSelect').value;
+                        if (brandId) {
+                            loadCars(brandId);
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.message
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete car.'
+                });
+                console.error('Error deleting car:', error);
+            }
+        }
+
+        // Event listener for brand selection
+        document.getElementById('brandSelect').addEventListener('change', function () {
+            const brandId = this.value;
+            if (brandId) {
+                loadCars(brandId);
+            } else {
+                // Clear the table if no brand is selected
+                document.getElementById('carTable').getElementsByTagName('tbody')[0].innerHTML = '';
+            }
+        });
+
+        // Initialize page with brand dropdown
+        document.addEventListener('DOMContentLoaded', loadBrands);
+        initializePage();
+    </script>
+</body>
+
+</html>

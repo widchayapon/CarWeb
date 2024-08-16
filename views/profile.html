@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQv_oL1l60gN7zHc_fMS11OeFR-mLDi3DgjNg&s"
+        type="image/png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .profile-container {
+            margin-top: 50px;
+        }
+
+        .card {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .card-body img {
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+
+        .card-body p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        .icon-button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            color: #333333;
+            background: #dddddd;
+            border: none;
+            outline: none;
+            border-radius: 50%;
+        }
+
+        .icon-button:hover {
+            cursor: pointer;
+        }
+
+        .icon-button:active {
+            background: #cccccc;
+        }
+
+        .icon-button__badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: red;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+        }
+
+        .navbar-nav .icon-button-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .navbar-nav .icon-button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+    <div class="container profile-container" style="margin-top: 100px;">
+        <div id="profile-card" class="card">
+            <div class="card-header bg-dark">
+                User Profile
+            </div>
+            <div class="card-body ">
+
+                <p id="profile-name"></p>
+                <p id="profile-email"></p>
+                <p id="profile-role"></p>
+                <button id="edit-profile-btn" class="btn btn-primary">Edit Profile</button>
+            </div>
+        </div>
+
+        <div id="edit-profile-card" class="card" style="display: none; margin-top: 20px;">
+            <div class="card-header bg-dark">
+                Edit Profile
+            </div>
+            <div class="card-body">
+                <form id="edit-profile-form">
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="edit-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="edit-email" name="email" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                    <button id="cancel-edit-btn" class="btn btn-secondary">Cancel</button>
+                </form>
+            </div>
+        </div>
+        <div id="footer-placeholder"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Function to get user role from session storage
+            function getUserRole() {
+                return sessionStorage.getItem('user_role');
+            }
+
+            // Function to get token from local storage
+            function getToken() {
+                return localStorage.getItem('authToken');
+            }
+
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/home'; // Redirect to login if no token found
+            }
+
+            // Function to load navbar based on user role
+            async function navbar() {
+                const userRole = getUserRole();
+                if (userRole == 'admin') {
+                    await loadNavbar('/navbar_admin');
+                } else if (userRole == 'user') {
+                    await loadNavbar('/navbar_user');
+                }
+            }
+
+            // Function to load footer
+            async function footer() {
+                await loadfooter('/footer');
+            }
+
+            // Function to load navbar HTML into the placeholder
+            async function loadNavbar(url) {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('navbar-placeholder').innerHTML = html;
+            }
+
+            // Function to load footer HTML into the placeholder
+            async function loadfooter(url) {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById('footer-placeholder').innerHTML = html; // Ensure ID matches here
+            }
+
+            let userId;
+
+            async function loadUserProfile() {
+                if (token) {
+                    try {
+                        const response = await fetch('/dashboard/user', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.ok) {
+                            const userData = await response.json();
+                            userId = userData.userId;
+                            console.log("User ID:", userId);
+                            document.getElementById('profile-name').textContent = `Name: ${userData.username}`;
+                            document.getElementById('profile-email').textContent = `Email: ${userData.email}`;
+                            document.getElementById('profile-role').textContent = `Role: ${userData.role}`;
+
+                            document.getElementById('edit-username').value = userData.username;
+                            document.getElementById('edit-email').value = userData.email;
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Oops...',
+                                text: 'Failed to load user profile!',
+                            });
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Something went wrong while loading the profile!',
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No token found!',
+                    });
+                }
+            }
+
+            async function updateProfile(event) {
+                event.preventDefault();
+
+                if (!userId) {
+                    console.error("User ID is undefined");
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'User ID is missing!',
+                    });
+                    return;
+                }
+
+                const username = document.getElementById('edit-username').value;
+                const email = document.getElementById('edit-email').value;
+
+                try {
+                    const response = await fetch(`/users/edit/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ username, email })
+                    });
+
+                    if (response.ok) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Profile updated successfully!',
+                        });
+                        loadUserProfile(); // Refresh profile data
+                        hideEditProfile(); // Hide edit form
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to update profile!',
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Something went wrong while updating the profile!',
+                    });
+                }
+            }
+
+            // Function to show the edit profile form
+            function showEditProfile() {
+                document.getElementById('edit-profile-card').style.display = 'block';
+            }
+
+            // Function to hide the edit profile form
+            function hideEditProfile() {
+                document.getElementById('edit-profile-card').style.display = 'none';
+            }
+
+            // Event listeners
+            document.getElementById('edit-profile-btn').addEventListener('click', showEditProfile);
+            document.getElementById('cancel-edit-btn').addEventListener('click', hideEditProfile);
+            document.getElementById('edit-profile-form').addEventListener('submit', updateProfile);
+
+            // Initialize navbar and user profile
+            navbar();
+            loadUserProfile();
+            footer();
+        });
+
+    </script>
+
+</body>
+
+
+</html>
